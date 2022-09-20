@@ -11,11 +11,6 @@ Go utils for working with [OneSky](http://www.oneskyapp.com/) translation servic
 $ go get github.com/SebastianCzoch/onesky-go
 ````
 
-or via [Godep](https://github.com/tools/godep)
-```
-$ godep get github.com/SebastianCzoch/onesky-go
-```
-
 ## Examples
 ### Example 1 - Download file
 
@@ -46,6 +41,27 @@ import (
 func main() {
 	onesky := onesky.Client{APIKey: "abcdef", Secret: "abcdef", ProjectID: 1}
 	_, err := onesky.UploadFile("messages.yml", "YAML", "en-US", true)
+	if err != nil {
+		fmt.Println("Can not upload file")
+	}
+}
+```
+
+```
+package main
+
+import (
+	"fmt"
+	"github.com/SebastianCzoch/onesky-go"
+)
+
+func main() {
+	onesky := onesky.Client{APIKey: "abcdef", Secret: "abcdef", ProjectID: 1}
+	f, err := os.Open("messages.yml")
+	defer f.Close()
+	is_allow_translation_same_as_original := false
+	keep_all_strings := true
+	_, err := onesky.UploadFileReader(f, "YAML", "en-US", keep_all_strings, is_allow_translation_same_as_original)
 	if err != nil {
 		fmt.Println("Can not upload file")
 	}
