@@ -382,6 +382,63 @@ func (c *Client) UploadFile(file, fileFormat, locale string, keepStrings bool) (
 	return aux.Data, nil
 }
 
+// UploadFile is method on Client struct which upload file to OneSky service
+func (c *Client) UploadFileReader(reader io.Reader, filename, fileFormat, locale string, keepStrings, is_allow_translation_same_as_original bool) (UploadData, error) {
+	endpoint, err := getEndpoint("postFile")
+	if err != nil {
+		return UploadData{}, err
+	}
+
+	v := url.Values{}
+	v.Set("locale", locale)
+	v.Set("file_format", fileFormat)
+	v.Set("is_keeping_all_strings", strconv.FormatBool(keepStrings))
+	v.Set("is_allow_translation_same_as_original", strconv.FormatBool(is_allow_translation_same_as_original))
+	urlStr, err := endpoint.full(c, v)
+	if err != nil {
+		return UploadData{}, err
+	}
+
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+
+	fw, err := w.CreateFormFile("file", filename)
+	if err != nil {
+		return UploadData{}, err
+	}
+
+	if _, err = io.Copy(fw, reader); err != nil {
+		return UploadData{}, err
+	}
+
+	w.Close()
+
+	res, err := makeRequest(endpoint.method, urlStr, &b, w.FormDataContentType())
+	if err != nil {
+		return UploadData{}, err
+	}
+
+	if res.StatusCode != http.StatusCreated {
+		return UploadData{}, fmt.Errorf("bad status: %s", res.Status)
+	}
+
+	body, err := getResponseBodyAsString(res)
+	if err != nil {
+		return UploadData{}, err
+	}
+
+	aux := UploadResponse{}
+	err = json.Unmarshal([]byte(body), &aux)
+	if err != nil {
+		return UploadData{}, err
+	}
+	if i, err := convertToInt64(aux.Data.Import.OriginalID); err == nil {
+		aux.Data.Import.ID = i
+	}
+
+	return aux.Data, nil
+}
+
 // DeleteFile is method on Client struct which remove file from OneSky service
 func (c *Client) DeleteFile(fileName string) error {
 	endpoint, err := getEndpoint("deleteFile")
